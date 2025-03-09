@@ -45,7 +45,7 @@ def extract_values(text):
 
 st.title("Bukti Potong Data Extractor")
 
-uploaded_files = st.file_uploader("Upload PDF Files", type=["pdf"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Silakan Upload PDF Files Khusus Bukti Potong PPh 23 yang resmi dirilis oleh Dirjen Pajak Indonesia", type=["pdf"], accept_multiple_files=True)
 
 if uploaded_files:
     data = []
@@ -63,7 +63,7 @@ if uploaded_files:
     st.dataframe(df.head(10))
     
     if not df.empty:
-        file_name = st.text_input("Enter filename to save (without extension/ don't add .xlsx at the last filename)")
+        file_name = st.text_input("Masukkan nama file untuk disimpan (tanpa extension/ jangan tambahkan .xlsx di akhir nama file)")
         if st.button("Save to Excel"):
             excel_path = f"{file_name}.xlsx"
             df.to_excel(excel_path, index=False)
