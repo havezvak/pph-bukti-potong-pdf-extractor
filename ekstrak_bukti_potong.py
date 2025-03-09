@@ -43,7 +43,7 @@ def extract_values(text):
     
     return extracted_values
 
-st.title("Bukti Potong Data Extractor")
+st.title("Bukti Potong (PPh 23) Data Extractor")
 
 uploaded_files = st.file_uploader("Silakan upload multiple PDF files khusus Bukti Potong PPh 23 yang resmi dirilis oleh Dirjen Pajak Indonesia", type=["pdf"], accept_multiple_files=True)
 
