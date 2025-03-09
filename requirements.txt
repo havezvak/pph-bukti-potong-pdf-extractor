@@ -3,3 +3,4 @@ pymupdf
 pdf2image
 pytesseract
 streamlit
+openpyxl

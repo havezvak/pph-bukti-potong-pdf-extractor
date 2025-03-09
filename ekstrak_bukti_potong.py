@@ -63,7 +63,7 @@ if uploaded_files:
     st.dataframe(df.head(10))
     
     if not df.empty:
-        file_name = st.text_input("Enter filename to save (without extension)")
+        file_name = st.text_input("Enter filename to save (without extension/ don't add .xlsx at the last filename)")
         if st.button("Save to Excel"):
             excel_path = f"{file_name}.xlsx"
             df.to_excel(excel_path, index=False)
