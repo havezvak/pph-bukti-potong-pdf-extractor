@@ -1,0 +1,5 @@
+pandas
+pymupdf
+pdf2image
+pytesseract
+streamlit
