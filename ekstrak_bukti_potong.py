@@ -45,7 +45,15 @@ def extract_values(text):
         "Tanggal": r"C\.4\s+TANGGAL\s*:\s*(.*?)\s+C\.5",
         "Tarif": r"Jasa Perantara\s+[\d.]+\s+(\d+)\s+[\d.]+\s+B\.8",
     }
-    extracted_values = {key: match.group(1).strip() for key, pattern in patterns.items() if (match := re.search(pattern, text, re.DOTALL))}
+    extracted_values = {}
+    for key, pattern in patterns.items():
+        match = re.search(pattern, text, re.DOTALL)
+        if match:
+            value = match.group(1).strip()
+            if key in ["DPP", "PPH", "Tarif"]:
+                value = int(value.replace('.', ''))
+            extracted_values[key] = value
+    
     return extracted_values
 
 def process_files(uploaded_files):
