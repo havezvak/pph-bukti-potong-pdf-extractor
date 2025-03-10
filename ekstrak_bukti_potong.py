@@ -31,20 +31,22 @@ def extract_text_from_pdf(pdf_path):
         text = "\n".join(pytesseract.image_to_string(img) for img in images)
     return re.sub(r"\s+", " ", text).strip()
 
+
 def extract_values(text):
     patterns = {
-        "Nomor Dokumen": r"B\.9\s+Nomor Dokumen\s*:\s*([\w/-]+)",
         "Nomor": r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+([A-Z0-9]+)",
+        "Nomor Dokumen" : r"B\.9\s+Nomor Dokumen\s*:\s*([\w/-]+)",
         "Masa Pajak": r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+[A-Z0-9]+\s+([\d-]+)\s+TIDAK FINAL",
         "Status Bukti Pemotongan": r"TIDAK FINAL\s+([A-Z]+)\s+A\. IDENTITAS WAJIB PAJAK",
-        "Kode Objek Pajak": r"B\.7\s+([\d-]+)\s+Jasa Perantara",
-        "DPP": r"B\.7\s+[\d-]+\s+Jasa Perantara\s+([\d.]+)",
-        "PPH": r"B\.7\s+[\d-]+\s+Jasa Perantara\s+[\d.]+\s+\d+\s+([\d.]+)",
+        "Kode Objek Pajak": r"B\.7\s+([\d-]+)\s+Jasa Perantara dan/atau Keagenan",
+        "DPP": r"B\.7\s+[\d-]+\s+Jasa Perantara dan/atau Keagenan\s+([\d.]+)",
+        "PPH": r"B\.7\s+[\d-]+\s+Jasa Perantara dan/atau Keagenan\s+[\d.]+\s+\d+\s+([\d.]+)",
         "NPWP": r"C\.1\s+NPWP / NIK\s*:\s*(\d+)\s+C\.2",
-        "Nama Pemotong": r"C\.3\s+NAMA PEMOTONG\s*:\s*(.*?)\s+C\.4",
+        "Nama Pemotong": r"C\.3\s+NAMA PEMOTONG DAN/ATAU PEMUNGUT\s+PPh\s*:\s*(.*?)\s+C\.4",
         "Tanggal": r"C\.4\s+TANGGAL\s*:\s*(.*?)\s+C\.5",
-        "Tarif": r"Jasa Perantara\s+[\d.]+\s+(\d+)\s+[\d.]+\s+B\.8",
+        "Tarif": r"Jasa Perantara dan/atau Keagenan\s+[\d.]+\s+(\d+)\s+[\d.]+\s+B\.8"
     }
+    
     extracted_values = {}
     for key, pattern in patterns.items():
         match = re.search(pattern, text, re.DOTALL)
