@@ -94,7 +94,7 @@ def process_files(uploaded_files):
         return df, len(uploaded_files), count_zip, count_rar, count_pdf, duplicate_rows, unique_rows
 
 # Streamlit UI - Upload File
-uploaded_files = st.file_uploader("Upload file (PDF, ZIP, RAR)", accept_multiple_files=True, type=["pdf", "zip", "rar"])
+uploaded_files = st.file_uploader("### Upload file (PDF, ZIP, RAR)", accept_multiple_files=True, type=["pdf", "zip", "rar"])
 
 if uploaded_files:
     df, total_files, count_zip, count_rar, count_pdf, duplicate_rows, unique_rows = process_files(uploaded_files)
@@ -107,6 +107,7 @@ if uploaded_files:
         st.write("### Hasil Ekstraksi (Contoh 10 Baris):")
         st.dataframe(df.head(10))
         
+        st.write("### Simpan Hasil Ekstraksi ke Excel")
         file_name = st.text_input("Masukkan nama file untuk disimpan ke excel (tanpa ekstensi):", "hasil_ekstraksi")
         excel_file = f"{file_name}.xlsx"
         df.to_excel(excel_file, index=False)
