@@ -88,7 +88,7 @@ def process_files(uploaded_files):
         
         df = pd.DataFrame(data)
         duplicate_rows = df.duplicated().sum()
-        df.drop_duplicates(inplace=True)
+        df.drop_duplicates(inplace=True).reset_index(inplace=True)
         unique_rows = len(df)
         
         return df, len(uploaded_files), count_zip, count_rar, count_pdf, duplicate_rows, unique_rows
