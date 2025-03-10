@@ -12,7 +12,7 @@ from tempfile import TemporaryDirectory
 
 # Streamlit UI Header
 st.title("Bukti Potong (PPh 23) Data Extractor")
-st.write("Upload files PDF, ZIP, atau RAR untuk diekstraksi !!")
+st.write("### Upload files PDF, ZIP, atau RAR untuk diekstraksi !!")
 
 # Folder sementara untuk ekstraksi
 def extract_compressed_file(file_path, extract_dir):
@@ -94,7 +94,7 @@ def process_files(uploaded_files):
         return df, len(uploaded_files), count_zip, count_rar, count_pdf, duplicate_rows, unique_rows
 
 # Streamlit UI - Upload File
-uploaded_files = st.file_uploader("### Upload file (PDF, ZIP, RAR)", accept_multiple_files=True, type=["pdf", "zip", "rar"])
+uploaded_files = st.file_uploader("Upload file (PDF, ZIP, RAR)", accept_multiple_files=True, type=["pdf", "zip", "rar"])
 
 if uploaded_files:
     df, total_files, count_zip, count_rar, count_pdf, duplicate_rows, unique_rows = process_files(uploaded_files)
