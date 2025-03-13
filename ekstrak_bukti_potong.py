@@ -33,23 +33,19 @@ def extract_text_from_pdf(pdf_path):
 
 
 def extract_pph_dpp_tarif(text):
-    pattern_uu_pph = r"24-\d{3}-\d{2}.*?UU PPh\.\s*([\d.,]+)\s*(\d+)\s*([\d.,]+)\s*B\.8"
-    pattern_jasa = r"24-\d{3}-\d{2}\s+Jasa Perantara dan/atau Keagenan\s+([\d.]+)\s+(\d+)\s+([\d.]+)\s+B\.8"
+    """ Mengekstrak nilai PPH, DPP, dan Tarif dari teks """
+    pattern = r"24-\d{3}-\d{2}.*?\n([\d.,]+)\s+(\d+)\s+([\d.,]+)"
     
-    match = re.search(pattern_uu_pph, text, re.DOTALL)
+    match = re.search(pattern, text, re.DOTALL)
     if match:
-        dpp_value = int(match.group(1).replace(".", "").replace(",", ".")) if match.group(1) else None
-        tarif_value = int(match.group(2)) if match.group(2) else None
-        pph_value = int(match.group(3).replace(".", "").replace(",", ".")) if match.group(3) else None
+        try:
+            dpp_value = int(match.group(1).replace(".", "").replace(",", ".")) if match.group(1) else None
+            tarif_value = int(match.group(2)) if match.group(2) else None
+            pph_value = int(match.group(3).replace(".", "").replace(",", ".")) if match.group(3) else None
+        except ValueError:
+            dpp_value, tarif_value, pph_value = None, None, None
     else:
         dpp_value, tarif_value, pph_value = None, None, None
-    
-    if dpp_value is None or tarif_value is None or pph_value is None:
-        match = re.search(pattern_jasa, text)
-        if match:
-            dpp_value = dpp_value or int(match.group(1).replace(".", ""))
-            tarif_value = tarif_value or int(match.group(2))
-            pph_value = pph_value or int(match.group(3).replace(".", ""))
 
     return {"PPH": pph_value, "DPP": dpp_value, "Tarif": tarif_value}
 
