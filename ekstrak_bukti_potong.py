@@ -32,31 +32,50 @@ def extract_text_from_pdf(pdf_path):
     return re.sub(r"\s+", " ", text).strip()
 
 
-def extract_values(text):
+def extract_pph_dpp_tarif(text):
+    pattern_uu_pph = r"24-\d{3}-\d{2}.*?UU PPh\.\s*([\d.,]+)\s*(\d+)\s*([\d.,]+)\s*B\.8"
+    pattern_jasa = r"24-\d{3}-\d{2}\s+Jasa Perantara dan/atau Keagenan\s+([\d.]+)\s+(\d+)\s+([\d.]+)\s+B\.8"
+    
+    match = re.search(pattern_uu_pph, text, re.DOTALL)
+    if match:
+        dpp_value = int(match.group(1).replace(".", "").replace(",", ".")) if match.group(1) else None
+        tarif_value = int(match.group(2)) if match.group(2) else None
+        pph_value = int(match.group(3).replace(".", "").replace(",", ".")) if match.group(3) else None
+    else:
+        dpp_value, tarif_value, pph_value = None, None, None
+    
+    if dpp_value is None or tarif_value is None or pph_value is None:
+        match = re.search(pattern_jasa, text)
+        if match:
+            dpp_value = dpp_value or int(match.group(1).replace(".", ""))
+            tarif_value = tarif_value or int(match.group(2))
+            pph_value = pph_value or int(match.group(3).replace(".", ""))
+
+    return {"PPH": pph_value, "DPP": dpp_value, "Tarif": tarif_value}
+
+def extract_additional_values(text):
     patterns = {
+        "Nomor Dokumen": r"B\.9\s+Nomor Dokumen\s*:\s*([\w/-]+)",
         "Nomor": r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+([A-Z0-9]+)",
-        "Nomor Dokumen" : r"B\.9\s+Nomor Dokumen\s*:\s*([\w/-]+)",
         "Masa Pajak": r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+[A-Z0-9]+\s+([\d-]+)\s+TIDAK FINAL",
-        "Status Bukti Pemotongan": r"TIDAK FINAL\s+([A-Z]+)\s+A\. IDENTITAS WAJIB PAJAK",
-        "Kode Objek Pajak": r"B\.7\s+([\d-]+)\s+Jasa Perantara dan/atau Keagenan",
-        "DPP": r"B\.7\s+[\d-]+\s+Jasa Perantara dan/atau Keagenan\s+([\d.]+)",
-        "PPH": r"B\.7\s+[\d-]+\s+Jasa Perantara dan/atau Keagenan\s+[\d.]+\s+\d+\s+([\d.]+)",
+        "Kode Objek Pajak": r"B\.\d+\s+([\d-]+)\s+",
         "NPWP": r"C\.1\s+NPWP / NIK\s*:\s*(\d+)\s+C\.2",
         "Nama Pemotong": r"C\.3\s+NAMA PEMOTONG DAN/ATAU PEMUNGUT\s+PPh\s*:\s*(.*?)\s+C\.4",
-        "Tanggal": r"C\.4\s+TANGGAL\s*:\s*(.*?)\s+C\.5",
-        "Tarif": r"Jasa Perantara dan/atau Keagenan\s+[\d.]+\s+(\d+)\s+[\d.]+\s+B\.8"
+        "Tanggal": r"C\.4\s+TANGGAL\s*:\s*(.*?)\s+C\.5"
     }
     
     extracted_values = {}
     for key, pattern in patterns.items():
         match = re.search(pattern, text, re.DOTALL)
         if match:
-            value = match.group(1).strip()
-            if key in ["DPP", "PPH", "Tarif"]:
-                value = int(value.replace('.', ''))
-            extracted_values[key] = value
+            extracted_values[key] = match.group(1).strip()
     
     return extracted_values
+
+def extract_all_values(text):
+    extracted = extract_additional_values(text)
+    extracted.update(extract_pph_dpp_tarif(text))
+    return extracted
 
 def process_files(uploaded_files):
     with TemporaryDirectory() as temp_dir:
@@ -80,7 +99,7 @@ def process_files(uploaded_files):
         for pdf in pdf_files:
             try:
                 text = extract_text_from_pdf(pdf)
-                extracted_data = extract_values(text)
+                extracted_data = extract_all_values(text)
                 extracted_data["File"] = os.path.basename(pdf)
                 data.append(extracted_data)
             except Exception as e:
@@ -93,6 +112,33 @@ def process_files(uploaded_files):
         unique_rows = len(df)
         
         return df, len(uploaded_files), count_zip, count_rar, count_pdf, duplicate_rows, unique_rows
+
+def process_files(file_paths):
+    pdf_files = []
+    for file in file_paths:
+        if file.lower().endswith((".zip", ".rar")):
+            pdf_files.extend(extract_compressed_file(file))
+        elif file.lower().endswith(".pdf"):
+            pdf_files.append(file)
+
+    data = []
+    for pdf in pdf_files:
+        try:
+            text = extract_text_from_pdf(pdf)
+            extracted_data = extract_all_values(text)
+            extracted_data["File"] = os.path.basename(pdf)
+            extracted_data["Content"] = text
+            data.append(extracted_data)
+            print(f"✅ Processed: {pdf}")
+        except Exception as e:
+            print(f"❌ Error processing {pdf}: {e}")
+
+    df = pd.DataFrame(data)
+    df.drop_duplicates(subset=["Content"], inplace=True)
+    df.drop(columns=["Content"], inplace=True)
+    shutil.rmtree(EXTRACTED_FOLDER, ignore_errors=True)
+    
+    return df
 
 # Streamlit UI - Upload File
 uploaded_files = st.file_uploader("Upload file (PDF, ZIP, RAR)", accept_multiple_files=True, type=["pdf", "zip", "rar"])
