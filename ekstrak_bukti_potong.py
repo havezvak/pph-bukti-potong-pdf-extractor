@@ -61,6 +61,7 @@ def extract_additional_values(text):
         "Nomor Dokumen": r"B\.9\s+Nomor Dokumen\s*: \s*([\w/-]+)",
         "Nomor": r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+([A-Z0-9]+)",
         "Masa Pajak": r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+[A-Z0-9]+\s+([\d-]+)\s+TIDAK FINAL",
+        "Status Bukti Pemotongan": r"TIDAK FINAL\s+([A-Z]+)\s+A\. IDENTITAS WAJIB PAJAK",
         "Kode Objek Pajak": r"B\.\d+\s+([\d-]+)\s+",
         "NPWP": r"C\.1\s+NPWP / NIK\s*: \s*(\d+)\s+C\.2",
         "Nama Pemotong": r"C\.3\s+NAMA PEMOTONG DAN/ATAU PEMUNGUT\s+PPh\s*: \s*(.*?)\s+C\.4",
