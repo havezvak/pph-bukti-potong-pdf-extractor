@@ -6,3 +6,4 @@ patool
 pandas
 numpy
 Pillow
+openpyxl

@@ -127,7 +127,6 @@ def process_files(file_paths):
     return df, len(file_paths), count_zip, count_rar, count_pdf, duplicate_rows, unique_rows
 
 # Streamlit UI
-st.title("Ekstraksi Data PPH dari PDF")
 uploaded_files = st.file_uploader("Upload file PDF atau ZIP/RAR", accept_multiple_files=True, type=["pdf", "zip", "rar"])
 
 if uploaded_files:
