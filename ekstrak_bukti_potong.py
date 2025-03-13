@@ -113,33 +113,6 @@ def process_files(uploaded_files):
         
         return df, len(uploaded_files), count_zip, count_rar, count_pdf, duplicate_rows, unique_rows
 
-def process_files(file_paths):
-    pdf_files = []
-    for file in file_paths:
-        if file.lower().endswith((".zip", ".rar")):
-            pdf_files.extend(extract_compressed_file(file))
-        elif file.lower().endswith(".pdf"):
-            pdf_files.append(file)
-
-    data = []
-    for pdf in pdf_files:
-        try:
-            text = extract_text_from_pdf(pdf)
-            extracted_data = extract_all_values(text)
-            extracted_data["File"] = os.path.basename(pdf)
-            extracted_data["Content"] = text
-            data.append(extracted_data)
-            print(f"✅ Processed: {pdf}")
-        except Exception as e:
-            print(f"❌ Error processing {pdf}: {e}")
-
-    df = pd.DataFrame(data)
-    df.drop_duplicates(subset=["Content"], inplace=True)
-    df.drop(columns=["Content"], inplace=True)
-    shutil.rmtree(EXTRACTED_FOLDER, ignore_errors=True)
-    
-    return df
-
 # Streamlit UI - Upload File
 uploaded_files = st.file_uploader("Upload file (PDF, ZIP, RAR)", accept_multiple_files=True, type=["pdf", "zip", "rar"])
 
