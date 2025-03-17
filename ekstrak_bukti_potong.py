@@ -36,50 +36,60 @@ def extract_text_from_pdf(pdf_path, debug=False):
     return clean_text(text)
 
 def extract_pph_dpp_tarif(text):
-    pattern_uu_pph = r"24-\d{3}-\d{2}.*?UU PPh\.\s*([\d.,]+)\s*(\d+)\s*([\d.,]+)\s*B\.8"
-    pattern_jasa = r"24-\d{3}-\d{2}\s+Jasa Perantara dan/atau Keagenan\s+([\d.]+)\s+(\d+)\s+([\d.]+)\s+B\.8"
-    
-    match = re.search(pattern_uu_pph, text, re.DOTALL)
-    if match:
-        dpp_value = int(match.group(1).replace(".", "").replace(",", ".")) if match.group(1) else None
-        tarif_value = int(match.group(2)) if match.group(2) else None
-        pph_value = int(match.group(3).replace(".", "").replace(",", ".")) if match.group(3) else None
-    else:
-        dpp_value, tarif_value, pph_value = None, None, None
-    
-    if dpp_value is None or tarif_value is None or pph_value is None:
-        match = re.search(pattern_jasa, text)
-        if match:
-            dpp_value = dpp_value or int(match.group(1).replace(".", ""))
-            tarif_value = tarif_value or int(match.group(2))
-            pph_value = pph_value or int(match.group(3).replace(".", ""))
+    """Ekstraksi PPH, DPP, dan Tarif dari berbagai pola teks."""
+    patterns = [
+        r"24-\d{3}-\d{2}.*?UU PPh\.\s*([\d.,]+)\s*(\d+)\s*([\d.,]+)",
+        r"24-\d{3}-\d{2}\s+Jasa Perantara dan/atau Keagenan\s+([\d.,]+)\s+(\d+)\s+([\d.,]+)"
+    ]
 
-    return {"PPH": pph_value, "DPP": dpp_value, "Tarif": tarif_value}
-
-def extract_additional_values(text):
-    patterns = {
-        "Nomor Dokumen": r"B\.9\s+Nomor Dokumen\s*: \s*([\w/-]+)",
-        "Nomor": r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+([A-Z0-9]+)",
-        "Masa Pajak": r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+[A-Z0-9]+\s+([\d-]+)\s+TIDAK FINAL",
-        "Status Bukti Pemotongan": r"TIDAK FINAL\s+([A-Z]+)\s+A\. IDENTITAS WAJIB PAJAK",
-        "Kode Objek Pajak": r"B\.\d+\s+([\d-]+)\s+",
-        "NPWP": r"C\.1\s+NPWP / NIK\s*: \s*(\d+)\s+C\.2",
-        "Nama Pemotong": r"C\.3\s+NAMA PEMOTONG DAN/ATAU PEMUNGUT\s+PPh\s*: \s*(.*?)\s+C\.4",
-        "Tanggal": r"C\.4\s+TANGGAL\s*: \s*(.*?)\s+C\.5"
-    }
-    
-    extracted_values = {}
-    for key, pattern in patterns.items():
+    for pattern in patterns:
         match = re.search(pattern, text, re.DOTALL)
         if match:
-            extracted_values[key] = match.group(1).strip()
-    
-    return extracted_values
+            dpp_value = int(match.group(1).replace(",", "").replace(".", ""))
+            tarif_value = int(match.group(2))
+            pph_value = int(match.group(3).replace(",", "").replace(".", ""))
+            return {"PPH": pph_value, "DPP": dpp_value, "Tarif": tarif_value}
+
+    return {"PPH": None, "DPP": None, "Tarif": None}
 
 def extract_all_values(text):
-    extracted = extract_additional_values(text)
-    extracted.update(extract_pph_dpp_tarif(text))
-    return extracted
+    """Ekstraksi semua data dari pola teks yang berbeda, dengan fallback ke Code 1 jika perlu."""
+    
+    # Pola regex dari Code 2 (prioritas utama)
+    patterns = {
+        "Nomor Dokumen": [r"Nomor Dokumen\s*:\s*:?\s*([\w\s/\-]+?)(?=\s*\d{1,2}\s+[A-Za-z]+\s+\d{4}|$)", r"B\.9\s+Nomor Dokumen\s*:\s*([\w/-]+)"],
+        "Nomor": [r"NOMOR\s*([\w\d]+)", r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+([A-Z0-9]+)"],
+        "Masa Pajak": [r"MASA PAJAK\s*([\d-]+)", r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+[A-Z0-9]+\s+([\d-]+)\s+TIDAK FINAL"],
+        "Kode Objek Pajak": [r"B\.7\s+(24-\d{3}-\d{2})", r"B\.\d+\s+([\d-]+)\s+"],
+        "NPWP": [r"NPWP / NIK\s*:\s*(\d+)", r"C\.1\s+NPWP / NIK\s*:\s*(\d+)\s+C\.2"],
+        "Nama Pemotong": [r"C\.3\s+NAMA PEMOTONG DAN/ATAU PEMUNGUT PPH\s*:\s*(.*?)\s*C\.4"],
+        "Tanggal": [r"C\.4\s+TANGGAL\s*:\s*([\d]+\s+[A-Za-z]+\s+\d+)", r"C\.4\s+TANGGAL\s*:\s*(.*?)\s+C\.5"]
+    }
+
+    extracted_values = {}
+    for key, patterns_list in patterns.items():
+        for pattern in patterns_list:
+            match = re.search(pattern, text, re.DOTALL)
+            if match:
+                extracted_values[key] = match.group(1).strip()
+                break  # Berhenti jika sudah menemukan hasil
+
+    # **Fallback ke Code 1 jika "Nomor" < 9 karakter atau "Nama Pemotong" kosong**
+    if len(extracted_values.get("Nomor", "")) != 9 or not extracted_values.get("Nama Pemotong"):
+        fallback_patterns = {
+            "Nomor": r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+([A-Z0-9]+)",
+            "Nama Pemotong": r"C\.3\s+NAMA PEMOTONG DAN/ATAU PEMUNGUT\s+PPh\s*:\s*(.*?)\s+C\.4"
+        }
+
+        for key, pattern in fallback_patterns.items():
+            match = re.search(pattern, text, re.DOTALL)
+            if match:
+                extracted_values[key] = match.group(1).strip()
+
+    # **Tambahkan hasil ekstraksi PPH, DPP, dan Tarif**
+    extracted_values.update(extract_pph_dpp_tarif(text))
+
+    return extracted_values
 
 def extract_compressed_file(file_path):
     """ Mengekstrak file ZIP atau RAR dan mengembalikan daftar file PDF """
