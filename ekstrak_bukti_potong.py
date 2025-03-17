@@ -8,7 +8,7 @@ import fitz  # PyMuPDF
 import patoolib
 import pytesseract
 from pdf2image import convert_from_path
-from tempfile import TemporaryDirectory
+import patoolib
 
 # Streamlit UI Header
 st.title("Bukti Potong (PPh 23) Data Extractor")
@@ -34,6 +34,20 @@ def extract_text_from_pdf(pdf_path, debug=False):
         st.text(f"=== DEBUG TEXT FROM {pdf_path} ===\n{text}\n=======================")
     
     return clean_text(text)
+
+def extract_compressed_file(file_path):
+    """ Mengekstrak file ZIP atau RAR dan mengembalikan daftar file PDF """
+    os.makedirs(EXTRACTED_FOLDER, exist_ok=True)
+    extracted_pdfs = []
+    
+    if zipfile.is_zipfile(file_path):
+        with zipfile.ZipFile(file_path, "r") as zip_ref:
+            zip_ref.extractall(EXTRACTED_FOLDER)
+    elif file_path.lower().endswith(".rar"):
+        patoolib.extract_archive(file_path, outdir=EXTRACTED_FOLDER)
+    
+    extracted_pdfs = [os.path.join(EXTRACTED_FOLDER, f) for f in os.listdir(EXTRACTED_FOLDER) if f.lower().endswith(".pdf")]
+    return extracted_pdfs, len(extracted_pdfs)  # Kembalikan daftar PDF & jumlahnya
 
 def extract_pph_dpp_tarif(text):
     """Ekstraksi PPH, DPP, dan Tarif dari berbagai pola teks."""
@@ -91,28 +105,24 @@ def extract_all_values(text):
 
     return extracted_values
 
-def extract_compressed_file(file_path):
-    """ Mengekstrak file ZIP atau RAR dan mengembalikan daftar file PDF """
-    os.makedirs(EXTRACTED_FOLDER, exist_ok=True)
-    
-    if zipfile.is_zipfile(file_path):
-        with zipfile.ZipFile(file_path, "r") as zip_ref:
-            zip_ref.extractall(EXTRACTED_FOLDER)
-    elif file_path.lower().endswith(".rar"):
-        patoolib.extract_archive(file_path, outdir=EXTRACTED_FOLDER)
-    
-    return [os.path.join(EXTRACTED_FOLDER, f) for f in os.listdir(EXTRACTED_FOLDER) if f.lower().endswith(".pdf")]
-
 def process_files(file_paths):
     pdf_files = []
     count_zip = count_rar = count_pdf = 0
+    extracted_from_zip = extracted_from_rar = 0
+    success_logs = []
+    error_logs = []
+
     for file in file_paths:
         if file.lower().endswith(".zip"):
-            pdf_files.extend(extract_compressed_file(file))
+            extracted_pdfs, extracted_count = extract_compressed_file(file)
+            pdf_files.extend(extracted_pdfs)
             count_zip += 1
+            extracted_from_zip += extracted_count
         elif file.lower().endswith(".rar"):
-            pdf_files.extend(extract_compressed_file(file))
+            extracted_pdfs, extracted_count = extract_compressed_file(file)
+            pdf_files.extend(extracted_pdfs)
             count_rar += 1
+            extracted_from_rar += extracted_count
         elif file.lower().endswith(".pdf"):
             pdf_files.append(file)
             count_pdf += 1
@@ -124,37 +134,49 @@ def process_files(file_paths):
             extracted_data = extract_all_values(text)
             extracted_data["File"] = os.path.basename(pdf)
             data.append(extracted_data)
-            st.success(f"✅ Processed: {pdf}")
+            success_logs.append(f"✅ Processed: {pdf}")
         except Exception as e:
-            st.error(f"❌ Error processing {pdf}: {e}")
+            error_logs.append(f"❌ Error processing {pdf}: {e}")
     
     df = pd.DataFrame(data)
     duplicate_rows = df.duplicated().sum()
     df.drop_duplicates(inplace=True)
     df.reset_index(drop=True, inplace=True)
-    unique_rows = len(df) - duplicate_rows
+    unique_rows = len(df)
+
     shutil.rmtree(EXTRACTED_FOLDER, ignore_errors=True)
     
-    return df, len(file_paths), count_zip, count_rar, count_pdf, duplicate_rows, unique_rows
+    return df, len(file_paths), count_zip, count_rar, count_pdf, extracted_from_zip, extracted_from_rar, duplicate_rows, unique_rows, success_logs, error_logs
 
 # Streamlit UI
 uploaded_files = st.file_uploader("Upload file PDF atau ZIP/RAR", accept_multiple_files=True, type=["pdf", "zip", "rar"])
 
 if uploaded_files:
-    temp_files = []
-    for uploaded_file in uploaded_files:
-        temp_path = os.path.join(EXTRACTED_FOLDER, uploaded_file.name)
-        os.makedirs(EXTRACTED_FOLDER, exist_ok=True)
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        temp_files.append(temp_path)
+    temp_files = [os.path.join(EXTRACTED_FOLDER, f.name) for f in uploaded_files]
+    os.makedirs(EXTRACTED_FOLDER, exist_ok=True)
+    for f in uploaded_files:
+        with open(os.path.join(EXTRACTED_FOLDER, f.name), "wb") as out_file:
+            out_file.write(f.getbuffer())
     
-    df, total_files, count_zip, count_rar, count_pdf, duplicate_rows, unique_rows = process_files(temp_files)
+    df, total_files, count_zip, count_rar, count_pdf, extracted_from_zip, extracted_from_rar, duplicate_rows, unique_rows, success_logs, error_logs = process_files(temp_files)
+
+    # Statistik File yang Diupload
     st.write(f"### Statistik File yang Diupload:")
     st.write(f"Total Files: {total_files}")
     st.write(f"PDF: {count_pdf}, ZIP: {count_zip}, RAR: {count_rar}")
+    st.write(f"PDF dari ZIP: {extracted_from_zip}, PDF dari RAR: {extracted_from_rar}, PDF keseluruhan = {count_pdf + extracted_from_zip + extracted_from_rar}")
     st.write(f"Baris Duplikat: {duplicate_rows}, Baris Unik: {unique_rows}")
-    
+
+    # Log Processing dalam Expander
+    with st.expander("✅ Log File yang Berhasil Diproses"):
+        for log in success_logs:
+            st.success(log)
+
+    with st.expander("❌ Log File yang Gagal Diproses"):
+        for log in error_logs:
+            st.error(log)
+
+    # Tampilkan Hasil Ekstraksi & Download
     if not df.empty:
         st.write("### Hasil Ekstraksi:")
         st.dataframe(df)
@@ -163,6 +185,5 @@ if uploaded_files:
         df.to_excel(excel_file, index=False)
         with open(excel_file, "rb") as f:
             st.download_button("📥 Download Excel", data=f, file_name=excel_file)
-
     else:
         st.warning("Tidak ada data yang dapat diekstrak.")
