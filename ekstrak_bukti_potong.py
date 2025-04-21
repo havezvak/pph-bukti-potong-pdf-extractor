@@ -77,7 +77,11 @@ def extract_all_values(text):
         "Kode Objek Pajak": [r"B\.7\s+(24-\d{3}-\d{2})", r"B\.\d+\s+([\d-]+)\s+"],
         "NPWP": [r"NPWP / NIK\s*:\s*(\d+)", r"C\.1\s+NPWP / NIK\s*:\s*(\d+)\s+C\.2"],
         "Nama Pemotong": [r"C\.3\s+NAMA PEMOTONG DAN/ATAU PEMUNGUT PPH\s*:\s*(.*?)\s*C\.4"],
-        "Tanggal": [r"C\.4\s+TANGGAL\s*:\s*([\d]+\s+[A-Za-z]+\s+\d+)", r"C\.4\s+TANGGAL\s*:\s*(.*?)\s+C\.5"]
+        "Tanggal": [r"C\.4\s+TANGGAL\s*:\s*([\d]+\s+[A-Za-z]+\s+\d+)", r"C\.4\s+TANGGAL\s*:\s*(.*?)\s+C\.5"],
+        "NITKU": [
+            r"C\.1\s+NPWP / NIK\s*:\s*\d+\s+(\d{16,})\s+C\.2",  # Teks 1: setelah NPWP dan sebelum C.2
+            r"C\.2\s+NOMOR IDENTITAS TEMPAT.*?USAHA \(NITKU\).*?:\s*(\d{16,} - .*?)\s+C\.3"  # Teks 2: langsung pada bagian C.2
+        ]
     }
 
     extracted_values = {}
