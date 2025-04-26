@@ -75,7 +75,7 @@ def extract_all_values(text):
         "Nomor": [r"NOMOR\s*([\w\d]+)", r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+([A-Z0-9]+)"],
         "Masa Pajak": [r"MASA PAJAK\s*([\d-]+)", r"PEMUNGUTAN\s+PPh\s+PEMUNGUTAN\s+[A-Z0-9]+\s+([\d-]+)\s+TIDAK FINAL"],
         "Kode Objek Pajak": [r"B\.7\s+(24-\d{3}-\d{2})", r"B\.\d+\s+([\d-]+)\s+"],
-        "NPWP": [r"NPWP / NIK\s*:\s*(\d+)", r"C\.1\s+NPWP / NIK\s*:\s*(\d+)\s+C\.2"],
+        "NPWP": [r"C\.1\s+NPWP / NIK\s*:\s*(\d+)\s+C\.2", r"NPWP / NIK\s*:\s*(\d+)"],
         "Nama Pemotong": [r"C\.3\s+NAMA PEMOTONG DAN/ATAU PEMUNGUT PPH\s*:\s*(.*?)\s*C\.4"],
         "Tanggal": [r"C\.4\s+TANGGAL\s*:\s*([\d]+\s+[A-Za-z]+\s+\d+)", r"C\.4\s+TANGGAL\s*:\s*(.*?)\s+C\.5"],
         "NITKU": [
