@@ -50,28 +50,43 @@ def extract_compressed_file(file_path):
     return extracted_pdfs, len(extracted_pdfs)  # Kembalikan daftar PDF & jumlahnya
 
 def extract_pph_dpp_tarif(text):
-    """Ekstraksi PPH, DPP, dan Tarif dari format OCR BPPU."""
-    patterns = [
-        r"24-\d{3}-\d{2}\s+Jasa Perantara dan/atau Keagenan\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)"
-    ]
+    """Ekstraksi PPH, DPP, dan Tarif dari teks OCR BPPU - hybrid method."""
 
-    for pattern in patterns:
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            try:
-                dpp_value = float(match.group(1).replace(",", "").replace(".", ""))
-                tarif_raw = match.group(2).replace(",", ".").strip()
-                tarif_value = float(tarif_raw) if '.' in tarif_raw else int(tarif_raw)
-                pph_value = float(match.group(3).replace(",", "").replace(".", ""))
-                return {"PPH": pph_value, "DPP": dpp_value, "Tarif": tarif_value}
-            except:
-                pass
+    # === PATTERN 1: Cocok untuk sample 1 & 2 (pola eksplisit)
+    pattern_1 = r"24-\d{3}-\d{2}\s+Jasa Perantara dan/atau Keagenan\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)"
+    match = re.search(pattern_1, text, re.DOTALL)
+    if match:
+        try:
+            dpp_value = float(match.group(1).replace(",", "").replace(".", ""))
+            tarif_raw = match.group(2).replace(",", ".").strip()
+            tarif_value = float(tarif_raw) if '.' in tarif_raw else int(tarif_raw)
+            pph_value = float(match.group(3).replace(",", "").replace(".", ""))
+            return {"PPH": pph_value, "DPP": dpp_value, "Tarif": tarif_value}
+        except Exception as e:
+            print("Parsing error (pattern 1):", e)
+
+    # === PATTERN 2: fallback untuk pola umum (seperti sample 3)
+    flat_text = " ".join(text.splitlines())
+    pattern_2 = r"(24-\d{3}-\d{2})(.*?)\s([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)"
+    match = re.search(pattern_2, flat_text)
+    if match:
+        try:
+            def to_number(x):
+                return float(x.replace(".", "").replace(",", "."))
+
+            dpp = to_number(match.group(3))
+            tarif = to_number(match.group(4))
+            pph = to_number(match.group(5))
+
+            return {"PPH": pph, "DPP": dpp, "Tarif": tarif}
+        except Exception as e:
+            print("Parsing error (pattern 2):", e)
 
     return {"PPH": None, "DPP": None, "Tarif": None}
 
 def extract_all_values(text):
     """Ekstraksi semua data dari pola teks yang berbeda, dengan fallback ke Code 1 jika perlu."""
-    
+
     # Pola regex dari Code 2 (prioritas utama)
     patterns = {
         "Nomor Dokumen": [r"Nomor Dokumen\s*:\s*:?\s*([\w\s/\-]+?)(?=\s*\d{1,2}\s+[A-Za-z]+\s+\d{4}|$)", r"B\.9\s+Nomor Dokumen\s*:\s*([\w/-]+)"],
@@ -81,10 +96,9 @@ def extract_all_values(text):
         "NPWP": [r"C\.1\s+NPWP / NIK\s*:\s*(\d+)\s+C\.2", r"NPWP / NIK\s*:\s*(\d+)"],
         "Nama Pemotong": [r"C\.3\s+NAMA PEMOTONG DAN/ATAU PEMUNGUT PPH\s*:\s*(.*?)\s*C\.4"],
         "Tanggal": [r"C\.4\s+TANGGAL\s*:\s*([\d]+\s+[A-Za-z]+\s+\d+)", r"C\.4\s+TANGGAL\s*:\s*(.*?)\s+C\.5"],
-        "NITKU": [
-            r"C\.1\s+NPWP / NIK\s*:\s*\d+\s+(\d{16,})\s+C\.2",  # Teks 1: setelah NPWP dan sebelum C.2
-            r"C\.2\s+NOMOR IDENTITAS TEMPAT.*?USAHA \(NITKU\).*?:\s*(\d{16,} - .*?)\s+C\.3"  # Teks 2: langsung pada bagian C.2
-        ]
+        "NITKU": [r"C\.1\s+NPWP / NIK\s*:\s*\d+\s+(\d{16,})\s+C\.2",  # Teks 1: setelah NPWP dan sebelum C.2
+                  r"C\.2\s+NOMOR IDENTITAS TEMPAT.*?USAHA \(NITKU\).*?:\s*(\d{16,})"  # Teks 2: tangkap hanya 16+ digit angka
+                  ]
     }
 
     extracted_values = {}
