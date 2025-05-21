@@ -50,19 +50,22 @@ def extract_compressed_file(file_path):
     return extracted_pdfs, len(extracted_pdfs)  # Kembalikan daftar PDF & jumlahnya
 
 def extract_pph_dpp_tarif(text):
-    """Ekstraksi PPH, DPP, dan Tarif dari berbagai pola teks."""
+    """Ekstraksi PPH, DPP, dan Tarif dari format OCR BPPU."""
     patterns = [
-        r"24-\d{3}-\d{2}.*?UU PPh\.\s*([\d.,]+)\s*(\d+)\s*([\d.,]+)",
-        r"24-\d{3}-\d{2}\s+Jasa Perantara dan/atau Keagenan\s+([\d.,]+)\s+(\d+)\s+([\d.,]+)"
+        r"24-\d{3}-\d{2}\s+Jasa Perantara dan/atau Keagenan\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)"
     ]
 
     for pattern in patterns:
         match = re.search(pattern, text, re.DOTALL)
         if match:
-            dpp_value = int(match.group(1).replace(",", "").replace(".", ""))
-            tarif_value = int(match.group(2))
-            pph_value = int(match.group(3).replace(",", "").replace(".", ""))
-            return {"PPH": pph_value, "DPP": dpp_value, "Tarif": tarif_value}
+            try:
+                dpp_value = float(match.group(1).replace(",", "").replace(".", ""))
+                tarif_raw = match.group(2).replace(",", ".").strip()
+                tarif_value = float(tarif_raw) if '.' in tarif_raw else int(tarif_raw)
+                pph_value = float(match.group(3).replace(",", "").replace(".", ""))
+                return {"PPH": pph_value, "DPP": dpp_value, "Tarif": tarif_value}
+            except:
+                pass
 
     return {"PPH": None, "DPP": None, "Tarif": None}
 
